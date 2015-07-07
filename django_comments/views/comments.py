@@ -3,13 +3,16 @@ from __future__ import absolute_import
 from django import http
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.urlresolvers import reverse_lazy
 from django.db import models
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.utils.translation import ugettext_lazy as _
 
 try:
     from django.apps import apps
@@ -19,6 +22,9 @@ except ImportError:
 import django_comments
 from django_comments import signals
 from django_comments.views.utils import next_redirect, confirmation_view
+
+REDIRECT_AFTER_COMMENT = getattr(settings, 'REDIRECT_AFTER_COMMENT')
+COMMENT_THANK_YOU_MESSAGE = getattr(settings, 'COMMENT_THANK_YOU_MESSAGE')
 
 
 class CommentPostBadRequest(http.HttpResponseBadRequest):
@@ -31,7 +37,8 @@ class CommentPostBadRequest(http.HttpResponseBadRequest):
     def __init__(self, why):
         super(CommentPostBadRequest, self).__init__()
         if settings.DEBUG:
-            self.content = render_to_string("comments/400-debug.html", {"why": why})
+            self.content = render_to_string("comments/400-debug.html",
+                                            {"why": why})
 
 
 @csrf_protect
@@ -137,7 +144,7 @@ def post_comment(request, next=None, using=None):
                          c=comment._get_pk_val())
 
 
-comment_done = confirmation_view(
-    template="comments/posted.html",
-    doc="""Display a "comment was posted" success page."""
-)
+def comment_done(request):
+    messages.add_message(request, messages.INFO, COMMENT_THANK_YOU_MESSAGE)
+    return redirect(reverse_lazy(REDIRECT_AFTER_COMMENT))
+
