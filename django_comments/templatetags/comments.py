@@ -8,6 +8,8 @@ import django_comments
 
 register = template.Library()
 
+SHOW_X_COMMENTS = int(getattr(settings, 'SHOW_X_COMMENTS', 10))
+
 
 class BaseCommentNode(template.Node):
     """
@@ -215,7 +217,8 @@ class RenderCommentListNode(CommentListNode):
                 "comments/%s/list.html" % ctype.app_label,
                 "comments/list.html"
             ]
-            qs = self.get_queryset(context)
+            qs = self.get_queryset(context).order_by(
+                '-submit_date')[:SHOW_X_COMMENTS]
             context.push()
             liststr = render_to_string(template_search_list, {
                 "comment_list": self.get_context_value_from_queryset(context, qs)
